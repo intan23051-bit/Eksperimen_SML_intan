@@ -1,8 +1,5 @@
 name: Automated Preprocessing Pipeline
 
-permissions:
-  contents: write
-
 on:
   push:
     branches:
@@ -12,16 +9,19 @@ on:
       - 'preprocessing/automate_intan.py'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   preprocess:
     runs-on: ubuntu-latest
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
-      
+        uses: actions/checkout@v4  
+
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12.7'
       
@@ -33,7 +33,7 @@ jobs:
       - name: Verify raw data exists
         run: |
           if [ ! -f "heart.csv" ]; then
-            echo "Raw data not found!"
+            echo "Raw data not found! Please make sure heart.csv is in the repository root."
             exit 1
           fi
           echo "Raw data found: heart.csv"
@@ -60,14 +60,20 @@ jobs:
           path: preprocessing/dataset_preprocessing/
           retention-days: 90
       
-      - name: Commit preprocessed data to repository
+      - name: Commit and push preprocessed data
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
+          git config --global user.email "actions@github.com"
+          git config --global user.name "github-actions[bot]"
           git add preprocessing/dataset_preprocessing/
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Automated preprocessing - $(date +'%Y-%m-%d %H:%M:%S')")
-          git push
-      
+          if git diff --staged --quiet; then
+            echo "No new changes to commit."
+          else
+            git commit -m "Automated preprocessing - $(date +'%Y-%m-%d %H:%M:%S')"
+            git push
+          fi
+
       - name: Preprocessing Complete
         run: |
           echo "======================================"
