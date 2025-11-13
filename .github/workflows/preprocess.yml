@@ -51,7 +51,7 @@ jobs:
           fi
       
       - name: Upload preprocessed data as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: preprocessed-data
           path: preprocessing/dataset_preprocessing/
