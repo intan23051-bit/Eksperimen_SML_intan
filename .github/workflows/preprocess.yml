@@ -1,0 +1,72 @@
+name: Automated Preprocessing Pipeline
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'heart.csv'
+      - 'preprocessing/automate_intan.py'
+  workflow_dispatch:
+
+jobs:
+  preprocess:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12.7'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas numpy scikit-learn
+      
+      - name: Verify raw data exists
+        run: |
+          if [ ! -f "heart.csv" ]; then
+            echo "Raw data not found!"
+            exit 1
+          fi
+          echo "Raw data found: heart.csv"
+      
+      - name: Run preprocessing
+        run: |
+          cd preprocessing
+          python automate_intan.py
+      
+      - name: Verify preprocessed data
+        run: |
+          if [ -f "preprocessing/dataset_preprocessing/X_train_preprocessed.csv" ]; then
+            echo "Preprocessing successful!"
+            ls -lh preprocessing/dataset_preprocessing/
+          else
+            echo "Preprocessing failed!"
+            exit 1
+          fi
+      
+      - name: Upload preprocessed data as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: preprocessed-data
+          path: preprocessing/dataset_preprocessing/
+          retention-days: 90
+      
+      - name: Commit preprocessed data to repository
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add preprocessing/dataset_preprocessing/
+          git diff --quiet && git diff --staged --quiet || (git commit -m "🤖 Automated preprocessing - $(date +'%Y-%m-%d %H:%M:%S')")
+          git push
+      
+      - name: Preprocessing Complete
+        run: |
+          echo "======================================"
+          echo "Preprocessing pipeline completed!"
+          echo "======================================"
